@@ -1,0 +1,10 @@
+MOUNTBASE='/home/user/.mounts'
+DATADIR='/home/user/data'
+ENCFSPASS='mysecretpassword'
+ACDSUBDIR='/PathOnACD'
+ACDCLI='/usr/local/bin/acd_cli'
+LOCALDAYS=14
+
+export ENCFS6_CONFIG='/home/user/encfs.xml'
+export HTTP_PROXY='https://xxx.yyy.xxx.yyy:8888/'
+export HTTPS_PROXY='https://xxx.yyy.xxx.yyy:8888/'
