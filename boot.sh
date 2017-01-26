@@ -22,7 +22,8 @@ mkdir -p ${MOUNTBASE}/acd-encrypted/ \
 ${ACDCLI} psync ${ACDSUBDIR}
 		 
 # Mount all the things!
-${ACDCLI} mount --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
+screen -dm -S acd-mount ${ACDCLI} mount -fg --modules="subdir,subdir=${ACDSUBDIR}" \
+    ${MOUNTBASE}/acd-encrypted/
 encfs --extpass="echo ${ENCFSPASS}" --reverse \
     ${MOUNTBASE}/local-decrypted/ ${MOUNTBASE}/local-encrypted/
 encfs --extpass="echo ${ENCFSPASS}" \
