@@ -10,7 +10,7 @@ source ${SCRIPTDIR}/syncdeletes.sh
 # Upload to Amazon Drive
 until ${ACDCLI} upload -o --max-connections 5 ${MOUNTBASE}/local-encrypted/* ${ACDSUBDIR}
 do
-    echo "Some uploaded didn't complete - initilising upload again after a sync."
+    echo "Some uploads didn't complete - initilising upload again after a sync."
     ${ACDCLI} psync ${ACDSUBDIR}
     sleep 60
 done
