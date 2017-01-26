@@ -16,14 +16,14 @@ fusermount -u ${MOUNTBASE}/local-encrypted/
 mkdir -p ${MOUNTBASE}/acd-encrypted/ \
          ${MOUNTBASE}/acd-decrypted/ \
          ${MOUNTBASE}/local-encrypted/ \
-		 ${MOUNTBASE}/local-decrypted/
+         ${MOUNTBASE}/local-decrypted/
 
 # Sync ACD Nodes
 ${ACDCLI} psync ${ACDSUBDIR}
-		 
+
 # Mount all the things!
-screen -dm -S acd-mount ${ACDCLI} mount -fg --modules="subdir,subdir=${ACDSUBDIR}" \
-    ${MOUNTBASE}/acd-encrypted/
+screen -dm -S acd-mount ${ACDCLI} mount -fg \
+    --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
 encfs --extpass="echo ${ENCFSPASS}" --reverse \
     ${MOUNTBASE}/local-decrypted/ ${MOUNTBASE}/local-encrypted/
 encfs --extpass="echo ${ENCFSPASS}" \
