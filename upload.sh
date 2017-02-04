@@ -4,6 +4,15 @@
 SCRIPTDIR=`dirname "$(readlink -f "$0")"`
 source ${SCRIPTDIR}/vars
 
+# Exit if already being executed
+RUNNINGPID=`cat ${SCRIPTDIR}/upload.pid 2>/dev/null`
+if [ -e /proc/${RUNNINGPID} ] && [ ! -z ${RUNNINGPID} ]; then
+    echo Upload script already running
+    exit 0
+else
+    echo $$ > ${SCRIPTDIR}/upload.pid
+fi
+
 # Sync Deletes
 source ${SCRIPTDIR}/syncdeletes.sh
 
@@ -22,4 +31,5 @@ ${ACDCLI} psync ${ACDSUBDIR}
 echo "Deleting local files older than ${LOCALDAYS} days"
 find ${MOUNTBASE}/local-decrypted/ -type f -mtime +${LOCALDAYS} -exec rm -rf {} \;
 
-# Todo: Lock upload so it can't be done more than one at a time
+# Cleanup pidfile
+rm -rf ${SCRIPTDIR}/upload.pid
