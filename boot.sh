@@ -4,13 +4,15 @@
 SCRIPTDIR=`dirname "$(readlink -f "$0")"`
 source ${SCRIPTDIR}/vars
 
+# Include functions for unmounting
+source ${SCRIPTDIR}/functions.sh
+
 # Unmount everything
 echo "Unmounting all mountpoints"
-# Todo: Not try to unmount the dirs which are not mounted
-fusermount -u ${DATADIR}
-fusermount -u ${MOUNTBASE}/acd-encrypted/
-fusermount -u ${MOUNTBASE}/acd-decrypted/
-fusermount -u ${MOUNTBASE}/local-encrypted/
+ACDToolsUnmount ${DATADIR}
+ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
+ACDToolsUnmount ${MOUNTBASE}/acd-decrypted/
+ACDToolsUnmount ${MOUNTBASE}/local-encrypted/
 
 # Make sure all dirs exist
 mkdir -p ${MOUNTBASE}/acd-encrypted/ \
