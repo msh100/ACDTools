@@ -20,12 +20,12 @@ source ${SCRIPTDIR}/syncdeletes.sh
 until ${ACDCLI} upload -o --max-connections 5 ${MOUNTBASE}/local-encrypted/* ${ACDSUBDIR}
 do
     echo "Some uploads didn't complete - initilising upload again after a sync."
-    ${ACDCLI} psync ${ACDSUBDIR}
+    ${ACDCLI} psync -r ${ACDSUBDIR}
     sleep 60
 done
 
 echo "Upload Complete - Syncing changes"
-${ACDCLI} psync ${ACDSUBDIR}
+${ACDCLI} psync -r ${ACDSUBDIR}
 
 # Delete local files older than ${LOCALDAYS}
 echo "Deleting local files older than ${LOCALDAYS} days"

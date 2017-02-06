@@ -43,4 +43,4 @@ for file in ${MATCHED}; do
 done
 
 # Sync Amazon Drive changes
-${ACDCLI} psync ${ACDSUBDIR}
+${ACDCLI} psync -r ${ACDSUBDIR}
