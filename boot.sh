@@ -21,7 +21,7 @@ mkdir -p ${MOUNTBASE}/acd-encrypted/ \
          ${MOUNTBASE}/local-decrypted/
 
 # Sync ACD Nodes
-${ACDCLI} psync -r ${ACDSUBDIR}
+${ACDCLI} sync
 
 # Mount all the things!
 screen -dm -S acd-mount ${ACDCLI} mount -fg \
