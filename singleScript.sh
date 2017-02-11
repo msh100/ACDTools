@@ -109,6 +109,59 @@ function ACDToolsUsage {
     echo $"Usage: $0 {mount|unmount|upload|sync|syncdeletes}"
 }
 
+# Reflect unionfs deleted file objects on Amazon Drive
+function ACDToolsSyncDeletes {
+    ACDMOUNT="${MOUNTBASE}/acd-encrypted/"
+    SEARCHDIR="${MOUNTBASE}/local-decrypted/.unionfs-fuse/"
+    
+    if [ -d "$DIRECTORY" ]; then
+       MATCHED=$(find ${SEARCHDIR} -type f -name '*_HIDDEN~')
+    else
+        # There's no need to proceed with this function
+        echo "No .unionfs-fuse/ directory found, nothing to delete"
+        return
+    fi
+
+    # Set the for delimiter
+    IFS='
+    '
+
+    # For every file listed by the find command
+    for file in ${MATCHED}; do
+
+        # Trim off the full path and hidden flag to get the real file path
+        FILENAME=$(echo ${file} | grep -oP "^${SEARCHDIR}\K.*")
+        FILENAME=${FILENAME%_HIDDEN~}
+
+        ENCNAME=$(encfsctl encode --extpass="echo ${ENCFSPASS}" \
+            ${ACDMOUNT} "${FILENAME}")
+
+        ACDEXIST=$(${ACDCLI} ls ${ACDSUBDIR}/${ENCNAME} > /dev/null 2>&1; \
+            echo $?)
+        if [ "${ACDEXIST}" -eq "0" ]; then
+            # File does exist, delete it from Amazon Drive
+            echo "${file} exists on Amazon Drive - deleting"
+            until `${ACDCLI} rm ${ACDSUBDIR}/${ENCNAME}`
+            do
+                # Failed delete - sleep and retry
+                echo "Delete failed, trying again in 30 seconds"
+                sleep 30
+            done
+
+            echo "${FILENAME} deleted from Amazon Drive"
+        else
+            echo "${file} is not on Amazon Drive"
+        fi
+
+        # Remove the UnionFS hidden object
+        rm -rf ${file}
+
+    done
+
+    # Sync Amazon Drive changes
+    ACDToolsSyncNodes
+}
+
 
 # Determins what the user wants to do
 
@@ -125,12 +178,14 @@ case "${ACTION}" in
         ;;
     upload)
         echo 3
+        # ACDToolsSyncDeletes
+        # then upload
         ;;
     sync)
         echo 4
         ;;
     syncdeletes)
-        echo 5
+        ACDToolsSyncDeletes
         ;;
     usage)
         ACDToolsUsage
