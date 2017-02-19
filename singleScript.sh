@@ -187,7 +187,7 @@ function ACDToolsUpload {
     ULATTEMPTS=0
 
     # Upload to Amazon Drive
-    until ${ACDCLI} upload -o --max-connections 5 ${MOUNTBASE}/local-encrypted/* ${ACDSUBDIR}
+    until ${ACDCLI} upload -o ${MOUNTBASE}/local-encrypted/* ${ACDSUBDIR}
     do
         ULATTEMPTS=$((ULATTEMPTS+1))
         echo -n "Some uploads failed - uploading again after a sync "
