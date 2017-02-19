@@ -169,9 +169,60 @@ function ACDToolsSyncDeletes {
     ACDToolsSyncNodes
 }
 
+# Upload local data to Amazon Drive
+function ACDToolsUpload {
+    # Exit if already being executed
+    RUNNINGPID=`cat ${DIR}/upload.pid 2>/dev/null`
+    if [ -e /proc/${RUNNINGPID} ] && [ ! -z ${RUNNINGPID} ]; then
+        echo Upload script already running
+        exit 1
+    else
+        echo $$ > ${DIR}/upload.pid
+    fi
+
+    # Sync Deletes
+    ACDToolsSyncDeletes
+
+    # Logic for force syncing on repeated failure
+    ULATTEMPTS=0
+
+    # Upload to Amazon Drive
+    until ${ACDCLI} upload -o --max-connections 5 ${MOUNTBASE}/local-encrypted/* ${ACDSUBDIR}
+    do
+        ULATTEMPTS=$((ULATTEMPTS+1))
+        echo -n "Some uploads failed - uploading again after a sync "
+        echo     "(attempt ${ULATTEMPTS})"
+
+        if [ "${ULATTEMPTS}" -ge 3 ]; then
+            echo "Uploads failed 3 (or more) times - Forcing full sync"
+            ACDToolsSyncNodes full
+        else
+            ACDToolsSyncNodes
+        fi
+        sleep 60
+    done
+
+    echo "Upload Complete - Syncing changes"
+    ACDToolsSyncNodes
+
+    # Delete local files older than ${LOCALDAYS}
+    ACDToolsLocalCleanup
+
+    # Cleanup pidfile
+    rm -rf ${DIR}/upload.pid
+}
+
+# Delete local data older than ${LOCALDAYS}
+function ACDToolsLocalCleanup {
+    echo "Deleting local files older than ${LOCALDAYS} days"
+
+    find ${MOUNTBASE}/local-decrypted/ -type f \
+        -mtime +${LOCALDAYS} -exec rm -rf {} \;
+}
+
+
 
 # Determins what the user wants to do
-
 ACTION=${*: -1:1} # TODO: This takes the last arg, doubt it is reliable.
 
 case "${ACTION}" in
@@ -184,11 +235,11 @@ case "${ACTION}" in
         ACDToolsUnmountAll
         ;;
     upload)
-        ACDToolsSyncDeletes
-        # then upload
+        ACDToolsUpload
         ;;
     sync)
-        echo 4
+        ACDToolsSyncNodes
+        # TODO: Work out how to pass a full option to this
         ;;
     syncdeletes)
         ACDToolsSyncDeletes
