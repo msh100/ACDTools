@@ -6,9 +6,9 @@
 # http://stackoverflow.com/a/246128/811814
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do
-  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-  SOURCE="$(readlink "$SOURCE")"
-  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
@@ -17,12 +17,12 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 # If -c is set, then set that value as ${OPTARG}
 while getopts ":c:" opt; do
-  case $opt in
-    c)
-      echo "User defined configuration file at ${OPTARG}"
-      CONFOPT=${OPTARG}
-      ;;
-  esac
+    case $opt in
+        c)
+            echo "User defined configuration file at ${OPTARG}"
+            CONFOPT=${OPTARG}
+            ;;
+    esac
 done
 
 if [ ${CONFOPT} ] && [ -f ${CONFOPT} ]; then
@@ -91,7 +91,7 @@ function ACDToolsMount {
 
     # Ensure the ACD Subdir exists
     ${ACDCLI} mkdir -p ${ACDSUBDIR}
-    
+
     # Mount everything
     screen -dm -S acd-mount ${ACDCLI} mount -fg \
         --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
@@ -113,7 +113,7 @@ function ACDToolsUsage {
 function ACDToolsSyncDeletes {
     ACDMOUNT="${MOUNTBASE}/acd-encrypted/"
     SEARCHDIR="${MOUNTBASE}/local-decrypted/.unionfs-fuse/"
-    
+
     if [ -d "$DIRECTORY" ]; then
        MATCHED=$(find ${SEARCHDIR} -type f -name '*_HIDDEN~')
     else
