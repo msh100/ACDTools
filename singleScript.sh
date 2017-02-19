@@ -78,7 +78,7 @@ function ACDToolsSyncNodes {
     echo "Syncing acdcli node cache database"
     ${ACDCLI} psync / # Sync root node first because of acdcli bug
 
-    if [ $1 -eq "full" ]; then
+    if [ $1 == "full" ]; then
         echo "Full acdcli node cache sync in progress, this may take a while"
         ${ACDCLI} sync -f
         ${ACDCLI} psync / # Sync root node first because of acdcli bug
