@@ -78,7 +78,7 @@ function ACDToolsSyncNodes {
     echo "Syncing acdcli node cache database"
     ${ACDCLI} psync / # Sync root node first because of acdcli bug
 
-    if [ $1 == "full" ]; then
+    if [ "$1" == "full" ]; then
         echo "Full acdcli node cache sync in progress, this may take a while"
         ${ACDCLI} sync -f
         ${ACDCLI} psync / # Sync root node first because of acdcli bug
@@ -98,6 +98,7 @@ function ACDToolsMount {
 
     # Ensure the ACD Subdir exists
     ${ACDCLI} mkdir -p ${ACDSUBDIR}
+    # TODO: If this exists, a warning appears - guess this should be hidden
 
     # Mount everything
     screen -dm -S acd-mount ${ACDCLI} mount -fg \
@@ -121,7 +122,7 @@ function ACDToolsSyncDeletes {
     ACDMOUNT="${MOUNTBASE}/acd-encrypted/"
     SEARCHDIR="${MOUNTBASE}/local-decrypted/.unionfs-fuse/"
 
-    if [ -d "$DIRECTORY" ]; then
+    if [ -d "$SEARCHDIR" ]; then
        MATCHED=$(find ${SEARCHDIR} -type f -name '*_HIDDEN~')
     else
         # There's no need to proceed with this function
@@ -167,6 +168,9 @@ function ACDToolsSyncDeletes {
 
     # Sync Amazon Drive changes
     ACDToolsSyncNodes
+
+    # Delete the searchdir so that it is not uploaded as an empty directories
+    rm -rf ${SEARCHDIR}
 }
 
 # Upload local data to Amazon Drive
