@@ -77,7 +77,14 @@ function ACDToolsUnmountAll {
 function ACDToolsSyncNodes {
     echo "Syncing acdcli node cache database"
     ${ACDCLI} psync / # Sync root node first because of acdcli bug
-    #${ACDCLI} sync
+
+    if [ $1 -eq "full" ]; then
+        echo "Full acdcli node cache sync in progress, this may take a while"
+        ${ACDCLI} sync -f
+        ${ACDCLI} psync / # Sync root node first because of acdcli bug
+    else
+        ${ACDCLI} sync
+    fi
 }
 
 # Function to mount everything for ACDTools
@@ -177,8 +184,7 @@ case "${ACTION}" in
         ACDToolsUnmountAll
         ;;
     upload)
-        echo 3
-        # ACDToolsSyncDeletes
+        ACDToolsSyncDeletes
         # then upload
         ;;
     sync)
