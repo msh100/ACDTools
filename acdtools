@@ -102,8 +102,7 @@ function ACDToolsMount {
     # TODO: If this exists, a warning appears - guess this should be hidden
 
     # Mount everything
-    screen -dm -S acd-mount ${ACDCLI} mount -fg \
-        --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
+    screen -dm -S acd-mount ${SCRIPTPATH} acdmount
     encfs --extpass="echo ${ENCFSPASS}" --reverse \
         ${MOUNTBASE}/local-decrypted/ ${MOUNTBASE}/local-encrypted/
     encfs --extpass="echo ${ENCFSPASS}" \
