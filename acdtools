@@ -11,6 +11,7 @@ while [ -h "$SOURCE" ]; do
     [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+SCRIPTPATH="${DIR}/$(basename ${0})"
 
 
 # Determine configuration file path and load it
@@ -54,13 +55,13 @@ fi
 # Unmount a mountpoint. Will not unmount if not already mounted.
 # TODO: fusermount does not exist on OS X, make compatible.
 function ACDToolsUnmount {
-    # Check if $1 is a mountpoint
-    ISMOUNTPOINT=`mountpoint ${1} > /dev/null 2>&1`
-    if [ $? -eq "0" ]; then
+    # Check if ${1} is a mountpoint (remove trailing slash)
+    ISMOUNTPOINT=`mount | grep ${1%/} | wc -l`
+    if [ ${ISMOUNTPOINT} -eq "0" ]; then
+        echo "Can not unmount ${1} - it is not mounted"
+    else
         echo "Unmounting ${1}"
         fusermount -u ${1}
-    else
-        echo "Can not unmount ${1} - it is not mounted"
     fi
 }
 
@@ -101,8 +102,7 @@ function ACDToolsMount {
     # TODO: If this exists, a warning appears - guess this should be hidden
 
     # Mount everything
-    screen -dm -S acd-mount ${ACDCLI} mount -fg \
-        --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
+    screen -dm -S acd-mount ${SCRIPTPATH} acdmount
     encfs --extpass="echo ${ENCFSPASS}" --reverse \
         ${MOUNTBASE}/local-decrypted/ ${MOUNTBASE}/local-encrypted/
     encfs --extpass="echo ${ENCFSPASS}" \
@@ -114,7 +114,7 @@ function ACDToolsMount {
 
 # Function to print usage of ACDTools
 function ACDToolsUsage {
-    echo $"Usage: $0 {mount|unmount|upload|sync|syncdeletes}"
+    echo $"Usage: $0 {mount|unmount|upload|sync|syncdeletes|acdmount}"
 }
 
 # Reflect unionfs deleted file objects on Amazon Drive
@@ -224,6 +224,22 @@ function ACDToolsLocalCleanup {
         -mtime +${LOCALDAYS} -exec rm -rf {} \;
 }
 
+# Foreground acdcli mount which will catch non-zero exits
+function ACDToolsACDCLIMount {
+    echo "Running acd_cli in the foreground"
+    ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
+
+    until ${ACDCLI} -d mount -fg \
+        --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
+    do
+        echo "The acdcli mount exited with a non-zero exitcode, remounting"
+        ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
+        sleep 5
+    done
+
+    echo "The acdcli mount exited with a zero exit code"
+}
+
 
 
 # Determins what the user wants to do
@@ -250,6 +266,9 @@ case "${ACTION}" in
         ;;
     usage)
         ACDToolsUsage
+        ;;
+    acdmount)
+        ACDToolsACDCLIMount
         ;;
     *)
         ACDToolsUsage
