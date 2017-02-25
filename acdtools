@@ -234,6 +234,7 @@ function ACDToolsACDCLIMount {
     do
         echo "The acdcli mount exited with a non-zero exitcode, remounting"
         ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
+        sleep 5
     done
 
     echo "The acdcli mount exited with a zero exit code"
