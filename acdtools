@@ -224,6 +224,20 @@ function ACDToolsLocalCleanup {
         -mtime +${LOCALDAYS} -exec rm -rf {} \;
 }
 
+# Foreground acdcli mount which will catch non-zero exits
+function ACDToolsACDCLIMount {
+    echo "Running acd_cli in the foreground"
+
+    until ${ACDCLI} -d mount -fg \
+        --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
+    do
+        echo "The acdcli mount exited with a non-zero exitcode, remounting"
+        ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
+    done
+
+    echo "The acdcli mount exited with a zero exit code"
+}
+
 
 
 # Determins what the user wants to do
@@ -250,6 +264,9 @@ case "${ACTION}" in
         ;;
     usage)
         ACDToolsUsage
+        ;;
+    acdmount)
+        ACDToolsACDCLIMount
         ;;
     *)
         ACDToolsUsage
