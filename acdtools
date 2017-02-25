@@ -54,13 +54,13 @@ fi
 # Unmount a mountpoint. Will not unmount if not already mounted.
 # TODO: fusermount does not exist on OS X, make compatible.
 function ACDToolsUnmount {
-    # Check if $1 is a mountpoint
-    ISMOUNTPOINT=`mountpoint ${1} > /dev/null 2>&1`
-    if [ $? -eq "0" ]; then
+    # Check if ${1} is a mountpoint (remove trailing slash)
+    ISMOUNTPOINT=`mount | grep ${1%/} | wc -l`
+    if [ ${ISMOUNTPOINT} -eq "0" ]; then
+        echo "Can not unmount ${1} - it is not mounted"
+    else
         echo "Unmounting ${1}"
         fusermount -u ${1}
-    else
-        echo "Can not unmount ${1} - it is not mounted"
     fi
 }
 
@@ -227,6 +227,7 @@ function ACDToolsLocalCleanup {
 # Foreground acdcli mount which will catch non-zero exits
 function ACDToolsACDCLIMount {
     echo "Running acd_cli in the foreground"
+    ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
 
     until ${ACDCLI} -d mount -fg \
         --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
