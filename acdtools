@@ -11,6 +11,7 @@ while [ -h "$SOURCE" ]; do
     [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+SCRIPTPATH="${DIR}/$(basename ${0})"
 
 
 # Determine configuration file path and load it
