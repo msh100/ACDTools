@@ -114,7 +114,7 @@ function ACDToolsMount {
 
 # Function to print usage of ACDTools
 function ACDToolsUsage {
-    echo $"Usage: $0 {mount|unmount|upload|sync|syncdeletes}"
+    echo $"Usage: $0 {mount|unmount|upload|sync|syncdeletes|acdmount}"
 }
 
 # Reflect unionfs deleted file objects on Amazon Drive
