@@ -94,7 +94,7 @@ As Amazon Drive is mounted as read-only, it is not possible to delete files. Uni
 
 This means that the file will still persist on Amazon until you run a `syncdeletes`.
 
-`syncdeleted` is automatically run on an `upload`.
+`syncdeletes` is automatically run on an `upload`.
 
 ```
 ./acdtools syncdeletes
