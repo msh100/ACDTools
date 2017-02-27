@@ -240,9 +240,44 @@ function ACDToolsACDCLIMount {
     echo "The acdcli mount exited with a zero exit code"
 }
 
+# Check for dependencies
+function ACDToolsDependencyCheck {
+    # acd_cli
+    TEST=`which ${ACDCLI} > /dev/null 2>&1; echo $?`
+    if [ "${TEST}" -ne "0" ]; then
+        FAILURE=" acd_cli"
+    fi
+
+    # unionfs
+    TEST=`which unionfs-fuse > /dev/null 2>&1; echo $?`
+    if [ "${TEST}" -ne "0" ]; then
+        FAILURE="${FAILURE} unionfs-fuse"
+    fi
+
+    # encfs
+    TEST=`which encfs > /dev/null 2>&1; echo $?`
+    if [ "${TEST}" -ne "0" ]; then
+        FAILURE="${FAILURE} encfs"
+    fi
+
+    # screen
+    TEST=`which screen > /dev/null 2>&1; echo $?`
+    if [ "${TEST}" -ne "0" ]; then
+        FAILURE="${FAILURE} screen"
+    fi
+
+    if [ ! -z "${FAILURE}" ]; then
+        echo -en "[\033[0;31mERROR\033[0m] ACDTools is missing the following "
+        echo     "dependencies:${FAILURE}"
+        exit 1
+    fi
+}
 
 
-# Determins what the user wants to do
+# Ensure dependencies exist before proceeding
+ACDToolsDependencyCheck
+
+# Determine what the user wants to do
 ACTION=${*: -1:1} # TODO: This takes the last arg, doubt it is reliable.
 
 case "${ACTION}" in
