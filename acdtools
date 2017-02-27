@@ -2,6 +2,26 @@
 
 # ACDTools
 
+# Logging function
+function ACDToolsLog {
+    echo -n "[$(date "+%Y-%m-%d %H:%M:%S")]"
+
+    case "${1}" in
+        info)
+            echo -en " [\033[0;36mINFO \033[0m] "
+            ;;
+        error)
+            echo -en " [\033[0;31mERROR\033[0m] "
+            ;;
+        warning)
+            echo -en " [\033[0;33mWARN \033[0m] "
+            ;;
+    esac
+
+    echo ${2}
+}
+
+
 # Set directory of current script
 # http://stackoverflow.com/a/246128/811814
 SOURCE="${BASH_SOURCE[0]}"
@@ -20,7 +40,7 @@ SCRIPTPATH="${DIR}/$(basename ${0})"
 while getopts ":c:" opt; do
     case $opt in
         c)
-            echo "User defined configuration file at ${OPTARG}"
+            ACDToolsLog info "User defined configuration file at ${OPTARG}"
             CONFOPT=${OPTARG}
             ;;
     esac
@@ -39,11 +59,11 @@ fi
 
 # If no valid configuation path, kill the script.
 if [ ! ${CONFIGPATH} ]; then
-    echo -n 'No valid configuration can be found. '
-    echo    'Use -c to define a configuration.'
+    ACDToolsLog error 'No valid configuration can be found. \
+        Use -c to define a configuration.'
     exit 1
 else
-    echo "Using configuration at ${CONFIGPATH}"
+    ACDToolsLog info "Using configuration at ${CONFIGPATH}"
     source ${CONFIGPATH}
 fi
 
@@ -58,16 +78,16 @@ function ACDToolsUnmount {
     # Check if ${1} is a mountpoint (remove trailing slash)
     ISMOUNTPOINT=`mount | grep ${1%/} | wc -l`
     if [ ${ISMOUNTPOINT} -eq "0" ]; then
-        echo "Can not unmount ${1} - it is not mounted"
+        ACDToolsLog warning "Can not unmount ${1} - it is not mounted"
     else
-        echo "Unmounting ${1}"
+        ACDToolsLog info "Unmounting ${1}"
         fusermount -u ${1}
     fi
 }
 
 # Function to unmount all mountpoints associated with ACDTools
 function ACDToolsUnmountAll {
-    echo "Unmounting all ACDTools mountpoints"
+    ACDToolsLog info "Unmounting all ACDTools mountpoints"
     ACDToolsUnmount ${DATADIR}
     ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
     ACDToolsUnmount ${MOUNTBASE}/acd-decrypted/
@@ -76,15 +96,16 @@ function ACDToolsUnmountAll {
 
 # Function to sync node cache 
 function ACDToolsSyncNodes {
-    echo "Syncing acdcli node cache database"
-    ${ACDCLI} psync / # Sync root node first because of acdcli bug
+    ACDToolsLog info "Syncing acdcli node cache database"
+    ${ACDCLI} psync / | while read line; do ACDToolsLog info "${line}"; done
 
     if [ "$1" == "full" ]; then
-        echo "Full acdcli node cache sync in progress, this may take a while"
-        ${ACDCLI} sync -f
-        ${ACDCLI} psync / # Sync root node first because of acdcli bug
+        ACDToolsLog info "Full acdcli node cache sync in progress, \
+            this may take a while"
+        ${ACDCLI} sync -f | while read line; do ACDToolsLog info "${line}"; done
+        ${ACDCLI} psync / | while read line; do ACDToolsLog info "${line}"; done
     else
-        ${ACDCLI} sync
+        ${ACDCLI} sync | while read line; do ACDToolsLog info "${line}"; done
     fi
 }
 
@@ -98,15 +119,21 @@ function ACDToolsMount {
         ${DATADIR} 2>/dev/null
 
     # Ensure the ACD Subdir exists
-    ${ACDCLI} mkdir -p ${ACDSUBDIR}
-    # TODO: If this exists, a warning appears - guess this should be hidden
+    ${ACDCLI} mkdir -p ${ACDSUBDIR} 2> /dev/null
 
     # Mount everything
+    ACDToolsLog info "Mounting Amazon Drive"
     screen -dm -S acd-mount ${SCRIPTPATH} acdmount
+
+    ACDToolsLog info "Mounting local encrypted filesystem"
     encfs --extpass="echo ${ENCFSPASS}" --reverse \
         ${MOUNTBASE}/local-decrypted/ ${MOUNTBASE}/local-encrypted/
+
+    ACDToolsLog info "Mounting Amazon decrypted filesystem"
     encfs --extpass="echo ${ENCFSPASS}" \
         ${MOUNTBASE}/acd-encrypted/ ${MOUNTBASE}/acd-decrypted/
+
+    ACDToolsLog info "Mounting UnionFS"
     unionfs-fuse -o cow,allow_other \
         ${MOUNTBASE}/local-decrypted=RW:${MOUNTBASE}/acd-decrypted=RO \
         ${DATADIR}
@@ -126,7 +153,7 @@ function ACDToolsSyncDeletes {
        MATCHED=$(find ${SEARCHDIR} -type f -name '*_HIDDEN~')
     else
         # There's no need to proceed with this function
-        echo "No .unionfs-fuse/ directory found, nothing to delete"
+        ACDToolsLog info "No .unionfs-fuse/ directory found, nothing to delete"
         return
     fi
 
@@ -148,17 +175,17 @@ function ACDToolsSyncDeletes {
             echo $?)
         if [ "${ACDEXIST}" -eq "0" ]; then
             # File does exist, delete it from Amazon Drive
-            echo "${file} exists on Amazon Drive - deleting"
+            ACDToolsLog info "${file} exists on Amazon Drive - deleting"
             until `${ACDCLI} rm ${ACDSUBDIR}/${ENCNAME}`
             do
                 # Failed delete - sleep and retry
-                echo "Delete failed, trying again in 30 seconds"
+                ACDToolsLog error "Delete failed, trying again in 30 seconds"
                 sleep 30
             done
 
-            echo "${FILENAME} deleted from Amazon Drive"
+            ACDToolsLog info "${FILENAME} deleted from Amazon Drive"
         else
-            echo "${file} is not on Amazon Drive"
+            ACDToolsLog info "${file} is not on Amazon Drive"
         fi
 
         # Remove the UnionFS hidden object
@@ -178,7 +205,7 @@ function ACDToolsUpload {
     # Exit if already being executed
     RUNNINGPID=`cat ${DIR}/upload.pid 2>/dev/null`
     if [ -e /proc/${RUNNINGPID} ] && [ ! -z ${RUNNINGPID} ]; then
-        echo Upload script already running
+        ACDToolsLog error "Upload script already running"
         exit 1
     else
         echo $$ > ${DIR}/upload.pid
@@ -194,11 +221,12 @@ function ACDToolsUpload {
     until ${ACDCLI} upload -o ${MOUNTBASE}/local-encrypted/* ${ACDSUBDIR}
     do
         ULATTEMPTS=$((ULATTEMPTS+1))
-        echo -n "Some uploads failed - uploading again after a sync "
-        echo     "(attempt ${ULATTEMPTS})"
+        ACDToolsLog error "Some uploads failed - uploading again after a sync \
+            (attempt ${ULATTEMPTS})"
 
         if [ "${ULATTEMPTS}" -ge 3 ]; then
-            echo "Uploads failed 3 (or more) times - Forcing full sync"
+            ACDToolsLog error "Uploads failed 3 (or more) times - Forcing full \
+                sync"
             ACDToolsSyncNodes full
         else
             ACDToolsSyncNodes
@@ -206,7 +234,7 @@ function ACDToolsUpload {
         sleep 60
     done
 
-    echo "Upload Complete - Syncing changes"
+    ACDToolsLog info "Upload Complete - Syncing changes"
     ACDToolsSyncNodes
 
     # Delete local files older than ${LOCALDAYS}
@@ -218,7 +246,7 @@ function ACDToolsUpload {
 
 # Delete local data older than ${LOCALDAYS}
 function ACDToolsLocalCleanup {
-    echo "Deleting local files older than ${LOCALDAYS} days"
+    ACDToolsLog info "Deleting local files older than ${LOCALDAYS} days"
 
     find ${MOUNTBASE}/local-decrypted/ -type f \
         -mtime +${LOCALDAYS} -exec rm -rf {} \;
@@ -226,18 +254,19 @@ function ACDToolsLocalCleanup {
 
 # Foreground acdcli mount which will catch non-zero exits
 function ACDToolsACDCLIMount {
-    echo "Running acd_cli in the foreground"
+    ACDToolsLog info "Running acd_cli in the foreground"
     ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
 
     until ${ACDCLI} -d mount -fg \
         --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
     do
-        echo "The acdcli mount exited with a non-zero exitcode, remounting"
+        ACDToolsLog error "The acdcli mount exited with a non-zero exitcode, \
+            remounting"
         ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
         sleep 5
     done
 
-    echo "The acdcli mount exited with a zero exit code"
+    ACDToolsLog info "The acdcli mount exited with a zero exit code"
 }
 
 # Check for dependencies
@@ -267,8 +296,8 @@ function ACDToolsDependencyCheck {
     fi
 
     if [ ! -z "${FAILURE}" ]; then
-        echo -en "[\033[0;31mERROR\033[0m] ACDTools is missing the following "
-        echo     "dependencies:${FAILURE}"
+        ACDToolsLog error "ACDTools is missing the following \
+            dependencies:${FAILURE}"
         exit 1
     fi
 }
@@ -306,6 +335,7 @@ case "${ACTION}" in
         ACDToolsACDCLIMount
         ;;
     *)
+        ACDToolsLog error "Unknown command: ${ACTION}"
         ACDToolsUsage
         exit 1
 esac
