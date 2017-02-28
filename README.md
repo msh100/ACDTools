@@ -1,6 +1,25 @@
 # ACDTools
 
-A series of scripts used to maintain an Amazon Drive mount.
+ACDTools is a script made to assist with the management of an Amazon Drive mount by simplifying mounting and making changes to encrypted datasets on Amazon Drive.
+
+When you mount with ACDTools, 4 different mountpoints will be created however you should only be reading from and writing to one of them (UnionFS, as visualised below). 
+The others exist to achieve the setup we have had the best performance and reliability from.
+
+We mount UnionFS on top of your local storage, and then your decrypted Amazon Drive files.
+
+```
+             -- Local Files
+UnionFS -- [
+             -- (RO) Amazon Files -- Encrypted Amazon Files
+```
+
+When you intend to *write* data to your mount, it will be written to your local content. 
+When you intent to *read* data from your mount, it will first check for the existence of data on your local storage and then on the decrypted Amazon Drive mount.
+This mean that if a file exists locally it can be read without contacting Amazon and decrypting data.
+
+Once you run `acdtools upload`, changes to local files will be reflected on Amazon Drive (they will be read from the encrypted representation of your local files). 
+It is therefore recommended to run this every night via crontab. 
+After a successful upload is complete, ACDTools will delete files older than a configureable amount of days from your local storage.
 
 
 ## Installation
