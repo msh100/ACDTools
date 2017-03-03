@@ -177,7 +177,8 @@ function ACDToolsSyncDeletes {
 
             if [ "${ACDEXIST}" -eq "0" ]; then
                 # File does exist, delete it from Amazon Drive
-                ACDToolsLog info "${file} exists on Amazon Drive - deleting"
+                ACDToolsLog info "${file#$SEARCHDIR} exists on Amazon Drive - \
+                    deleting"
                 until `${ACDCLI} rm "${ACDSUBDIR}/${ENCNAME}"`
                 do
                     # Failed delete - sleep and retry
@@ -188,7 +189,7 @@ function ACDToolsSyncDeletes {
 
                 ACDToolsLog info "${FILENAME} deleted from Amazon Drive"
             else
-                ACDToolsLog info "${file} is not on Amazon Drive"
+                ACDToolsLog info "${file#$SEARCHDIR} is not on Amazon Drive"
             fi
 
             # Remove the UnionFS hidden object
