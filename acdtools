@@ -196,6 +196,7 @@ function ACDToolsSyncDeletes {
             rm -rf "${file}"
         else
             ACDToolsLog error "Empty name returned from encfsctl - skipping."
+            FAILEDSYNCDELETES=1
         fi
 
     done
@@ -204,7 +205,13 @@ function ACDToolsSyncDeletes {
     ACDToolsSyncNodes
 
     # Delete the searchdir so that it is not uploaded as an empty directories
-    rm -rf "${SEARCHDIR}"
+    # There's still a chance this can happen with the fix for #27
+    if [ -z "${FAILEDSYNCDELETES}" ]; then
+        rm -rf "${SEARCHDIR}"
+    else
+        ACDToolsLog warn "Not clearing .uninfs directory as there were \
+            failures."
+    fi
 }
 
 # Upload local data to Amazon Drive
