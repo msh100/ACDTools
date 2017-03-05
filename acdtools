@@ -241,8 +241,10 @@ function ACDToolsUpload {
     fi
 
     # Upload to Amazon Drive
+    STDERR=$(mktemp)
+    
     until ${ACDCLI} upload -o ${ACDEXCLUDE} ${MOUNTBASE}/local-encrypted/* \
-        ${ACDSUBDIR}
+        ${ACDSUBDIR} 2>${STDERR}
     do
         ULATTEMPTS=$((ULATTEMPTS+1))
         ACDToolsLog error "Some uploads failed - uploading again after a sync \
@@ -254,6 +256,9 @@ function ACDToolsUpload {
             ACDToolsSyncNodes full
         else
             ACDToolsSyncNodes
+            
+            cat ${STDERR}
+            exit 1
         fi
         sleep 60
     done
