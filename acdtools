@@ -214,8 +214,8 @@ function ACDToolsSyncDeletes {
     if [ -z "${FAILEDSYNCDELETES}" ]; then
         rm -rf "${SEARCHDIR}"
     else
-        ACDToolsLog warning "Not clearing .uninfs directory as there were \
-            failures."
+        ACDToolsLog warning "Not clearing .unionfs-fuse directory as there \
+            were failures."
     fi
 }
 
