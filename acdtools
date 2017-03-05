@@ -33,6 +33,8 @@ done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 SCRIPTPATH="${DIR}/$(basename ${0})"
 
+unset GREP_OPTIONS # supress warnings
+
 
 # Determine configuration file path and load it
 
