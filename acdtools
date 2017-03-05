@@ -260,12 +260,12 @@ function ACDToolsUpload {
                 sync"
             ACDToolsSyncNodes full
         else
-            SKIPGENERICSYNC=$(grep -Po 'Folder "[^ ]+" already exists' \
-                ${STDERR} | wc -l)
+            MISSINGFOLDERMATCH=$(grep -Po 'Folder "[^ ]+" already exists' \
+                ${STDERR})
+            SKIPGENERICSYNC=$(${MISSINGFOLDERMATCH} | wc -l)
 
             # For every stderr with "folder xxx already exists", psync that dir
-            grep -Po 'Folder "[^ ]+" already exists' ${STDERR} | cut -d'"' -f2 \
-                | while read line; do
+            echo ${MISSINGFOLDERMATCH} | cut -d'"' -f2 | while read line; do
                 ACDToolsLog warning "Partially syncing a directory due to an \
                     acd_cli bug"
                 FULLPATH=$(find ${MOUNTBASE}/local-encrypted -name "${line}")
