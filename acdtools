@@ -261,8 +261,8 @@ function ACDToolsUpload {
                 FULLPATH=$(find ${MOUNTBASE}/local-encrypted -name "${line}")
                 FULLPATH=${ACDSUBDIR}/${FULLPATH#$MOUNTBASE/local-encrypted/}
                 
-                ACDTools warn "Partially syncing a directory due to an acd_cli \
-                    bug"
+                ACDToolsLog warn "Partially syncing a directory due to an \
+                    acd_cli bug"
                 ${ACDCLI} psync -r ${FULLPATH}
             done
 
