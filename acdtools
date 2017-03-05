@@ -255,13 +255,24 @@ function ACDToolsUpload {
                 sync"
             ACDToolsSyncNodes full
         else
+            # For every stderr with "folder xxx already exists", psync that dir
+            grep -Po 'Folder "[^ ]+" already exists' ${STDERR} | cut -d'"' -f2 \
+                | while read line; do 
+                FULLPATH=$(find ${MOUNTBASE}/local-encrypted -name "${line}")
+                FULLPATH=${ACDSUBDIR}/${FULLPATH#$MOUNTBASE/local-encrypted/}
+                
+                ACDTools warn "Partially syncing a directory due to an acd_cli \
+                    bug"
+                ${ACDCLI} psync -r ${FULLPATH}
+            done
+
             ACDToolsSyncNodes
-            
-            cat ${STDERR}
-            exit 1
         fi
         sleep 60
     done
+    
+    # Cleanup tmp file
+    rm -rf ${STDERR}
 
     ACDToolsLog info "Upload Complete - Syncing changes"
     ACDToolsSyncNodes
