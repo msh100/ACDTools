@@ -255,6 +255,8 @@ function ACDToolsUpload {
                 sync"
             ACDToolsSyncNodes full
         else
+            SKIPGENERICSYNC=0
+
             # For every stderr with "folder xxx already exists", psync that dir
             grep -Po 'Folder "[^ ]+" already exists' ${STDERR} | cut -d'"' -f2 \
                 | while read line; do
@@ -264,9 +266,13 @@ function ACDToolsUpload {
                 FULLPATH=${ACDSUBDIR}/${FULLPATH#$MOUNTBASE/local-encrypted/}
 
                 ${ACDCLI} psync -r ${FULLPATH}
+                SKIPGENERICSYNC=1
             done
 
-            ACDToolsSyncNodes
+            # If error not caught, try a generic sync
+            if [ "${SKIPGENERICSYNC}" -eq "0" ]; then
+                ACDToolsSyncNodes
+            fi
         fi
         sleep 60
     done
