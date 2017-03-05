@@ -99,7 +99,7 @@ function ACDToolsUnmountAll {
 # Function to sync node cache 
 function ACDToolsSyncNodes {
     ACDToolsLog info "Syncing acdcli node cache database"
-    ${ACDCLI} psync / | while read line; do ACDToolsLog info "${line}"; done
+    ${ACDCLI} psync / > /dev/null 2>&1
 
     if [ "$1" == "full" ]; then
         ACDToolsLog info "Full acdcli node cache sync in progress, \
