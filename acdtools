@@ -106,6 +106,9 @@ function ACDToolsSyncNodes {
             this may take a while"
         ${ACDCLI} sync -f | while read line; do ACDToolsLog info "${line}"; done
         ${ACDCLI} psync / | while read line; do ACDToolsLog info "${line}"; done
+    elif [ "$1" == "partial" ]; then
+        ${ACDCLI} psync  -r ${2} | \
+            while read line; do ACDToolsLog info "${line}"; done
     else
         ${ACDCLI} sync | while read line; do ACDToolsLog info "${line}"; done
     fi
@@ -266,8 +269,8 @@ function ACDToolsUpload {
                     acd_cli bug"
                 FULLPATH=$(find ${MOUNTBASE}/local-encrypted -name "${line}")
                 FULLPATH=${ACDSUBDIR}/${FULLPATH#$MOUNTBASE/local-encrypted/}
-
-                ${ACDCLI} psync -r ${FULLPATH}
+                
+                ACDToolsSyncNodes partial "${FULLPATH}"
                 SKIPGENERICSYNC=1
             done
 
