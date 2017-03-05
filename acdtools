@@ -171,25 +171,33 @@ function ACDToolsSyncDeletes {
         ENCNAME=$(encfsctl encode --extpass="echo ${ENCFSPASS}" \
             ${ACDMOUNT} "${FILENAME}")
 
-        ACDEXIST=$(${ACDCLI} ls ${ACDSUBDIR}/${ENCNAME} > /dev/null 2>&1; \
-            echo $?)
-        if [ "${ACDEXIST}" -eq "0" ]; then
-            # File does exist, delete it from Amazon Drive
-            ACDToolsLog info "${file} exists on Amazon Drive - deleting"
-            until `${ACDCLI} rm ${ACDSUBDIR}/${ENCNAME}`
-            do
-                # Failed delete - sleep and retry
-                ACDToolsLog error "Delete failed, trying again in 30 seconds"
-                sleep 30
-            done
+        if [ "${#ENCNAME}" -gt "0" ]; then
+            ACDEXIST=$(${ACDCLI} ls ${ACDSUBDIR}/${ENCNAME} > /dev/null 2>&1; \
+                echo $?)
 
-            ACDToolsLog info "${FILENAME} deleted from Amazon Drive"
+            if [ "${ACDEXIST}" -eq "0" ]; then
+                # File does exist, delete it from Amazon Drive
+                ACDToolsLog info "${file#$SEARCHDIR} exists on Amazon Drive - \
+                    deleting"
+                until `${ACDCLI} rm "${ACDSUBDIR}/${ENCNAME}"`
+                do
+                    # Failed delete - sleep and retry
+                    ACDToolsLog error "Delete failed, trying again in 30 \
+                        seconds"
+                    sleep 30
+                done
+
+                ACDToolsLog info "${FILENAME} deleted from Amazon Drive"
+            else
+                ACDToolsLog info "${file#$SEARCHDIR} is not on Amazon Drive"
+            fi
+
+            # Remove the UnionFS hidden object
+            rm -rf "${file}"
         else
-            ACDToolsLog info "${file} is not on Amazon Drive"
+            ACDToolsLog error "Empty name returned from encfsctl - skipping."
+            FAILEDSYNCDELETES=1
         fi
-
-        # Remove the UnionFS hidden object
-        rm -rf ${file}
 
     done
 
@@ -197,7 +205,13 @@ function ACDToolsSyncDeletes {
     ACDToolsSyncNodes
 
     # Delete the searchdir so that it is not uploaded as an empty directories
-    rm -rf ${SEARCHDIR}
+    # There's still a chance this can happen with the fix for #27
+    if [ -z "${FAILEDSYNCDELETES}" ]; then
+        rm -rf "${SEARCHDIR}"
+    else
+        ACDToolsLog warn "Not clearing .uninfs directory as there were \
+            failures."
+    fi
 }
 
 # Upload local data to Amazon Drive
@@ -216,9 +230,19 @@ function ACDToolsUpload {
 
     # Logic for force syncing on repeated failure
     ULATTEMPTS=0
+    
+    # Determine the .unionfs-fuse directory name as to not upload it
+    EXCLUDENAME=$(encfsctl encode --extpass="echo ${ENCFSPASS}" \
+        ${MOUNTBASE}/acd-encrypted .unionfs-fuse)
+    if [ "${#EXCLUDENAME}" -gt "0" ]; then
+        ACDToolsLog info "Will not upload ${EXCLUDENAME} directory \
+            (.unionfs-fuse)"
+        ACDEXCLUDE=" -xp ${MOUNTBASE}/local-encrypted/${EXCLUDENAME} "
+    fi
 
     # Upload to Amazon Drive
-    until ${ACDCLI} upload -o ${MOUNTBASE}/local-encrypted/* ${ACDSUBDIR}
+    until ${ACDCLI} upload -o ${ACDEXCLUDE} ${MOUNTBASE}/local-encrypted/* \
+        ${ACDSUBDIR}
     do
         ULATTEMPTS=$((ULATTEMPTS+1))
         ACDToolsLog error "Some uploads failed - uploading again after a sync \
