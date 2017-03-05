@@ -285,8 +285,7 @@ function ACDToolsUpload {
     # Cleanup tmp file
     rm -rf ${STDERR}
 
-    ACDToolsLog info "Upload Complete - Syncing changes"
-    ACDToolsSyncNodes
+    ACDToolsLog info "Upload complete"
 
     # Delete local files older than ${LOCALDAYS}
     ACDToolsLocalCleanup
