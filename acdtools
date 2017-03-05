@@ -235,7 +235,7 @@ function ACDToolsUpload {
 
     # Logic for force syncing on repeated failure
     ULATTEMPTS=0
-    
+
     # Determine the .unionfs-fuse directory name as to not upload it
     EXCLUDENAME=$(encfsctl encode --extpass="echo ${ENCFSPASS}" \
         ${MOUNTBASE}/acd-encrypted .unionfs-fuse)
@@ -247,7 +247,7 @@ function ACDToolsUpload {
 
     # Upload to Amazon Drive
     STDERR=$(mktemp)
-    
+
     until ${ACDCLI} upload -o ${ACDEXCLUDE} ${MOUNTBASE}/local-encrypted/* \
         ${ACDSUBDIR} 2>${STDERR}
     do
@@ -281,7 +281,7 @@ function ACDToolsUpload {
         fi
         sleep 60
     done
-    
+
     # Cleanup tmp file
     rm -rf ${STDERR}
 
