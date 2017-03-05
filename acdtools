@@ -194,7 +194,7 @@ function ACDToolsSyncDeletes {
 
                 ACDToolsLog info "${FILENAME} deleted from Amazon Drive"
             else
-                ACDToolsLog info "${file#$SEARCHDIR} is not on Amazon Drive"
+                ACDToolsLog info "${FILENAME} is not on Amazon Drive"
             fi
 
             # Remove the UnionFS hidden object
