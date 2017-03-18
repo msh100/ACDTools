@@ -241,22 +241,28 @@ function ACDToolsUpload {
     fi
 
     # Upload to Amazon Drive
-    until ${ACDCLI} upload -o ${ACDEXCLUDE} ${MOUNTBASE}/local-encrypted/* \
-        ${ACDSUBDIR}
-    do
-        ULATTEMPTS=$((ULATTEMPTS+1))
-        ACDToolsLog error "Some uploads failed - uploading again after a sync \
-            (attempt ${ULATTEMPTS})"
+	# Redirect error to `/dev/null` so as not to pollute the output with an
+	# `Input/output error`.
+	if [ "$(ls -A ${MOUNTBASE}/local-encrypted/* 2> /dev/null)" ] ; then
+	    until ${ACDCLI} upload -o ${ACDEXCLUDE} ${MOUNTBASE}/local-encrypted/* \
+	        ${ACDSUBDIR}
+	    do
+	        ULATTEMPTS=$((ULATTEMPTS+1))
+	        ACDToolsLog error "Some uploads failed - uploading again after a sync \
+	            (attempt ${ULATTEMPTS})"
 
-        if [ "${ULATTEMPTS}" -ge 3 ]; then
-            ACDToolsLog error "Uploads failed 3 (or more) times - Forcing full \
-                sync"
-            ACDToolsSyncNodes full
-        else
-            ACDToolsSyncNodes
-        fi
-        sleep 60
-    done
+	        if [ "${ULATTEMPTS}" -ge 3 ]; then
+	            ACDToolsLog error "Uploads failed 3 (or more) times - Forcing full \
+	                sync"
+	            ACDToolsSyncNodes full
+	        else
+	            ACDToolsSyncNodes
+	        fi
+	        sleep 60
+	    done
+	else
+		ACDToolsLog info "${MOUNTBASE}/local-encrypted/* is empty - nothing to upload"
+	fi
 
     ACDToolsLog info "Upload Complete - Syncing changes"
     ACDToolsSyncNodes
