@@ -28,7 +28,8 @@ ACDTools depends on:
 
  * bash
  * FUSE (as this is a kernel module, OpenVZ containers may experience issues)
- * [`acd_cli`](https://github.com/yadayada/acd_cli)
+ * [`acd_cli`](https://github.com/yadayada/acd_cli) version 0.3.2 or above.
+   For example, use `pip3 install --upgrade --pre acdcli`.
  * [encfs](https://github.com/vgough/encfs)
  * [UnionFS-FUSE](https://github.com/rpodgorny/unionfs-fuse)
 
