@@ -18,7 +18,9 @@ function ACDToolsLog {
             ;;
     esac
 
-    echo ${2}
+    # Strip out double spaces caused by indentation
+    LOGLINE=$(echo ${2} | sed 's/  */ /g')
+    echo ${LOGLINE}
 }
 
 
@@ -158,8 +160,7 @@ function ACDToolsSyncDeletes {
     fi
 
     # Set the for delimiter
-    IFS='
-    '
+    IFS=$'\n'
 
     # For every file listed by the find command
     for file in ${MATCHED}; do
