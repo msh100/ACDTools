@@ -284,7 +284,7 @@ function ACDToolsLocalCleanup {
     ACDToolsLog info "Deleting local files older than ${LOCALDAYS} days"
 
     find ${MOUNTBASE}/local-decrypted/ -type f \
-        -mtime +${LOCALDAYS} -exec rm -rf {} \;
+        -ctime +${LOCALDAYS} -exec rm -rf {} \;
 }
 
 # Foreground acdcli mount which will catch non-zero exits
