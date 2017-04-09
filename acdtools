@@ -96,8 +96,12 @@ function ACDToolsUnmountAll {
     ACDToolsUnmount ${MOUNTBASE}/local-encrypted/
 }
 
-# Function to sync node cache 
+# Function to sync node cache
 function ACDToolsSyncNodes {
+    ACDToolsLog info "Unsetting the last sync date so we don't need to sleep"
+    sqlite3 ~/.cache/acd_cli/nodes.db \
+        "INSERT OR REPLACE INTO metadata VALUES ('last_sync', 0)"
+
     ACDToolsLog info "Syncing acdcli node cache database"
     ${ACDCLI} psync / | while read line; do ACDToolsLog info "${line}"; done
 
@@ -324,6 +328,12 @@ function ACDToolsDependencyCheck {
     TEST=`which screen > /dev/null 2>&1; echo $?`
     if [ "${TEST}" -ne "0" ]; then
         FAILURE="${FAILURE} screen"
+    fi
+
+    # sqlite3
+    TEST=`which sqlite3 > /dev/null 2>&1; echo $?`
+    if [ "${TEST}" -ne "0" ]; then
+        FAILURE="${FAILURE} sqlite3"
     fi
 
     if [ ! -z "${FAILURE}" ]; then
