@@ -91,7 +91,10 @@ function ACDToolsUnmount {
 function ACDToolsUnmountAll {
     ACDToolsLog info "Unmounting all ACDTools mountpoints"
     ACDToolsUnmount ${DATADIR}
+    touch ${DIR}/unmount.acd
     ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
+    sleep 6
+    rm -f ${DIR}/unmount.acd
     ACDToolsUnmount ${MOUNTBASE}/acd-decrypted/
     ACDToolsUnmount ${MOUNTBASE}/local-encrypted/
 }
@@ -287,21 +290,23 @@ function ACDToolsLocalCleanup {
         -ctime +${LOCALDAYS} -exec rm -rf {} \;
 }
 
-# Foreground acdcli mount which will catch non-zero exits
+# Foreground acdcli mount which will keep remounting until unmount file exists
 function ACDToolsACDCLIMount {
-    ACDToolsLog info "Running acd_cli in the foreground"
-    ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
-
-    until ${ACDCLI} -d mount -fg \
-        --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
+    while [ ! -f ${DIR}/unmount.acd ]
     do
-        ACDToolsLog error "The acdcli mount exited with a non-zero exitcode, \
-            remounting"
+        ACDToolsLog info "Running acd_cli in the foreground"
         ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
+
+        ${ACDCLI} -d mount -fg \
+            --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
+
+        ACDToolsLog info "Amazon Cloud mount exited - checking if to remount in
+            a couple of seconds"
         sleep 5
     done
 
-    ACDToolsLog info "The acdcli mount exited with a zero exit code"
+    ACDToolsLog info "The acdcli mount exited cleanly"
+    rm -f ${DIR}/unmount.acd
 }
 
 # Check for dependencies
