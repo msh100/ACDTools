@@ -18,7 +18,9 @@ function ACDToolsLog {
             ;;
     esac
 
-    echo ${2}
+    # Strip out double spaces caused by indentation
+    LOGLINE=$(echo ${2} | sed 's/  */ /g')
+    echo ${LOGLINE}
 }
 
 
@@ -91,13 +93,20 @@ function ACDToolsUnmount {
 function ACDToolsUnmountAll {
     ACDToolsLog info "Unmounting all ACDTools mountpoints"
     ACDToolsUnmount ${DATADIR}
+    touch ${DIR}/unmount.acd
     ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
+    sleep 6
+    rm -f ${DIR}/unmount.acd
     ACDToolsUnmount ${MOUNTBASE}/acd-decrypted/
     ACDToolsUnmount ${MOUNTBASE}/local-encrypted/
 }
 
-# Function to sync node cache 
+# Function to sync node cache
 function ACDToolsSyncNodes {
+    ACDToolsLog info "Unsetting the last sync date so we don't need to sleep"
+    sqlite3 ~/.cache/acd_cli/nodes.db \
+        "INSERT OR REPLACE INTO metadata VALUES ('last_sync', 0)"
+
     ACDToolsLog info "Syncing acdcli node cache database"
     ${ACDCLI} psync / > /dev/null 2>&1
 
@@ -163,8 +172,7 @@ function ACDToolsSyncDeletes {
     fi
 
     # Set the for delimiter
-    IFS='
-    '
+    IFS=$'\n'
 
     # For every file listed by the find command
     for file in ${MATCHED}; do
@@ -246,41 +254,43 @@ function ACDToolsUpload {
     fi
 
     # Upload to Amazon Drive
-    STDERR=$(mktemp)
+    if [ "$(ls -A ${MOUNTBASE}/local-encrypted/* 2> /dev/null)" ] ; then
+        STDERR=$(mktemp)
 
-    until ${ACDCLI} upload -o ${ACDEXCLUDE} ${MOUNTBASE}/local-encrypted/* \
-        ${ACDSUBDIR} 2>${STDERR}
-    do
-        ULATTEMPTS=$((ULATTEMPTS+1))
-        ACDToolsLog error "Some uploads failed - uploading again after a sync \
-            (attempt ${ULATTEMPTS})"
+        until ${ACDCLI} upload -o ${ACDEXCLUDE} ${MOUNTBASE}/local-encrypted/* \
+            ${ACDSUBDIR} 2>${STDERR}
+        do
+            ULATTEMPTS=$((ULATTEMPTS+1))
+            ACDToolsLog error "Some uploads failed - uploading again after a sync \
+                (attempt ${ULATTEMPTS})"
 
-        if [ "${ULATTEMPTS}" -ge 3 ]; then
-            ACDToolsLog error "Uploads failed 3 (or more) times - Forcing full \
-                sync"
-            ACDToolsSyncNodes full
-        else
-            MISSINGFOLDERMATCH=$(grep -Po 'Folder "[^ ]+" already exists' \
-                ${STDERR})
-            SKIPGENERICSYNC=$(${MISSINGFOLDERMATCH} | wc -l)
+            if [ "${ULATTEMPTS}" -ge 3 ]; then
+                ACDToolsLog error "Uploads failed 3 (or more) times - Forcing full \
+                    sync"
+                ACDToolsSyncNodes full
+            else
+                MISSINGFOLDERMATCH=$(grep -Po 'Folder "[^ ]+" already exists' \
+                    ${STDERR})
+                SKIPGENERICSYNC=$(${MISSINGFOLDERMATCH} | wc -l)
 
-            # For every stderr with "folder xxx already exists", psync that dir
-            echo ${MISSINGFOLDERMATCH} | cut -d'"' -f2 | while read line; do
-                ACDToolsLog warning "Partially syncing a directory due to an \
-                    acd_cli bug"
-                FULLPATH=$(find ${MOUNTBASE}/local-encrypted -name "${line}")
-                FULLPATH=${ACDSUBDIR}/${FULLPATH#$MOUNTBASE/local-encrypted/}
+                # For every stderr with "folder xxx already exists", psync that dir
+                echo ${MISSINGFOLDERMATCH} | cut -d'"' -f2 | while read line; do
+                    ACDToolsLog warning "Partially syncing a directory due to an \
+                        acd_cli bug"
+                    FULLPATH=$(find ${MOUNTBASE}/local-encrypted -name "${line}")
+                    FULLPATH=${ACDSUBDIR}/${FULLPATH#$MOUNTBASE/local-encrypted/}
 
-                ACDToolsSyncNodes partial "${FULLPATH}"
-            done
+                    ACDToolsSyncNodes partial "${FULLPATH}"
+                done
 
-            # If error not caught, try a generic sync
-            if [ "${SKIPGENERICSYNC}" -eq "0" ]; then
-                ACDToolsSyncNodes
+                # If error not caught, try a generic sync
+                if [ "${SKIPGENERICSYNC}" -eq "0" ]; then
+                    ACDToolsSyncNodes
+                fi
             fi
-        fi
-        sleep 60
-    done
+            sleep 60
+        done
+    fi
 
     # Cleanup tmp file
     rm -rf ${STDERR}
@@ -299,24 +309,26 @@ function ACDToolsLocalCleanup {
     ACDToolsLog info "Deleting local files older than ${LOCALDAYS} days"
 
     find ${MOUNTBASE}/local-decrypted/ -type f \
-        -mtime +${LOCALDAYS} -exec rm -rf {} \;
+        -ctime +${LOCALDAYS} -exec rm -rf {} \;
 }
 
-# Foreground acdcli mount which will catch non-zero exits
+# Foreground acdcli mount which will keep remounting until unmount file exists
 function ACDToolsACDCLIMount {
-    ACDToolsLog info "Running acd_cli in the foreground"
-    ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
-
-    until ${ACDCLI} -d mount -fg \
-        --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
+    while [ ! -f ${DIR}/unmount.acd ]
     do
-        ACDToolsLog error "The acdcli mount exited with a non-zero exitcode, \
-            remounting"
+        ACDToolsLog info "Running acd_cli in the foreground"
         ACDToolsUnmount ${MOUNTBASE}/acd-encrypted/
+
+        ${ACDCLI} -d mount -fg \
+            --modules="subdir,subdir=${ACDSUBDIR}" ${MOUNTBASE}/acd-encrypted/
+
+        ACDToolsLog info "Amazon Cloud mount exited - checking if to remount in
+            a couple of seconds"
         sleep 5
     done
 
-    ACDToolsLog info "The acdcli mount exited with a zero exit code"
+    ACDToolsLog info "The acdcli mount exited cleanly"
+    rm -f ${DIR}/unmount.acd
 }
 
 # Check for dependencies
@@ -343,6 +355,12 @@ function ACDToolsDependencyCheck {
     TEST=`which screen > /dev/null 2>&1; echo $?`
     if [ "${TEST}" -ne "0" ]; then
         FAILURE="${FAILURE} screen"
+    fi
+
+    # sqlite3
+    TEST=`which sqlite3 > /dev/null 2>&1; echo $?`
+    if [ "${TEST}" -ne "0" ]; then
+        FAILURE="${FAILURE} sqlite3"
     fi
 
     if [ ! -z "${FAILURE}" ]; then
