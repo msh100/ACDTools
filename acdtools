@@ -349,7 +349,8 @@ function ACDToolsDependencyCheck {
         FAILURE="${FAILURE} git"
     elif [ ! -d ${DIR}/acd_cli ]; then
         ACDToolsLog info "Cloning fork of acd_cli";
-        git clone https://github.com/ofir123/acd_cli.git 2>&1 | while read line;
+        git clone -b missing-files-fix\
+            https://github.com/ofir123/acd_cli.git 2>&1 | while read line;
         do
             ACDToolsLog info "${line}"
         done
