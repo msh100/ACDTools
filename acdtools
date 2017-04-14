@@ -311,7 +311,7 @@ function ACDToolsACDCLIMount {
 
 # Check for dependencies
 function ACDToolsDependencyCheck {
-    # acd_cli
+    # acd_cli - we keep this here to ensure dependencies for fork are met
     TEST=`which ${ACDCLI} > /dev/null 2>&1; echo $?`
     if [ "${TEST}" -ne "0" ]; then
         FAILURE=" acd_cli"
@@ -340,6 +340,19 @@ function ACDToolsDependencyCheck {
     if [ "${TEST}" -ne "0" ]; then
         FAILURE="${FAILURE} sqlite3"
     fi
+
+    # git (for custom acdcli version)
+    TEST=`which git > /dev/null 2>&1; echo $?`
+    if [ "${TEST}" -ne "0" ]; then
+        FAILURE="${FAILURE} git"
+    elif [ ! -d ${DIR}/acd_cli ]; then
+        ACDToolsLog info "Cloning fork of acd_cli";
+        git clone https://github.com/ofir123/acd_cli.git 2>&1 | while read line;
+        do
+            ACDToolsLog info "${line}"
+        done
+    fi
+    ACDCLI="${DIR}/acd_cli/acd_cli.py"
 
     if [ ! -z "${FAILURE}" ]; then
         ACDToolsLog error "ACDTools is missing the following \

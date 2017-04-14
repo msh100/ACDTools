@@ -32,6 +32,7 @@ ACDTools depends on:
  * [encfs](https://github.com/vgough/encfs)
  * [UnionFS-FUSE](https://github.com/rpodgorny/unionfs-fuse)
  * [sqlite3](https://www.sqlite.org/)
+ * [git](https://git-scm.com/) (*used because a fork of `acd_cli` is pulled*)
 
 ```
 git clone https://github.com/msh100/ACDTools.git
