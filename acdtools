@@ -333,7 +333,7 @@ function ACDToolsACDCLIMount {
 
         ACDToolsLog info "Amazon Cloud mount exited - checking if to remount in
             a couple of seconds"
-        sleep 5
+        sleep 2
     done
 
     ACDToolsLog info "The acdcli mount exited cleanly"
