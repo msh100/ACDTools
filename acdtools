@@ -109,7 +109,6 @@ function ACDToolsSyncNodes {
     fi
 
     ACDToolsLog info "Syncing acdcli node cache database"
-    ${ACDCLI} psync / | while read line; do ACDToolsLog info "${line}"; done
 
     if [ "$1" == "full" ]; then
         ACDToolsLog info "Full acdcli node cache sync in progress, \
