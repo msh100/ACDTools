@@ -102,9 +102,10 @@ function ACDToolsUnmountAll {
 # Function to sync node cache
 function ACDToolsSyncNodes {
     if [ -f ~/.cache/acd_cli/nodes.db ]; then
-        ACDToolsLog info "Unsetting the last sync date so we don't need to sleep"
-        sqlite3 ~/.cache/acd_cli/nodes.db \
-            "INSERT OR REPLACE INTO metadata VALUES ('last_sync', 0)" 2>/dev/null
+        ACDToolsUnsetSyncDate
+    elif [ "$1" != "full" ]; then
+        ACDToolsLog info "Nodes DB does not exist, we must force sync"
+        ACDToolsSyncNodes "full"
     fi
 
     ACDToolsLog info "Syncing acdcli node cache database"
@@ -112,12 +113,35 @@ function ACDToolsSyncNodes {
 
     if [ "$1" == "full" ]; then
         ACDToolsLog info "Full acdcli node cache sync in progress, \
-            this may take a while"
+            this may take a very long time and has multiple stages"
         ${ACDCLI} sync -f | while read line; do ACDToolsLog info "${line}"; done
+        ACDToolsUnsetSyncDate
         ${ACDCLI} psync / | while read line; do ACDToolsLog info "${line}"; done
+        ACDToolsUnsetSyncDate
+        ${ACDCLI} psync -r ${ACDSUBDIR} | while read line; do ACDToolsLog info "${line}"; done
     else
         ${ACDCLI} sync | while read line; do ACDToolsLog info "${line}"; done
     fi
+}
+
+function ACDToolsSyncLocalNodes {
+    # Produce upload list to sync
+    LOCALLIST=$(find ${MOUNTBASE}/local-encrypted/ | tail -n +2)
+    IFS=$'\n'
+
+    ACDToolsLog info "Syncing nodes from Amazon Drive which match the filename\
+        of local files. This may take some time."
+
+    for file in ${LOCALLIST}; do
+        NODEPATH="${ACDSUBDIR}/${file#${MOUNTBASE}/local-encrypted/}"
+        ${ACDCLI} psync ${NODEPATH} > /dev/null # We really don't need this spam
+    done
+}
+
+function ACDToolsUnsetSyncDate {
+    ACDToolsLog info "Unsetting the last sync date so we don't need to sleep"
+    sqlite3 ~/.cache/acd_cli/nodes.db \
+        "INSERT OR REPLACE INTO metadata VALUES ('last_sync', 0)" 2>/dev/null
 }
 
 # Function to mount everything for ACDTools
@@ -265,11 +289,13 @@ function ACDToolsUpload {
                 ACDToolsLog error "Uploads failed 3 (or more) times - Forcing full \
                     sync"
                 ACDToolsSyncNodes full
+                ACDToolsSyncLocalNodes
             elif [ "${ULATTEMPTS}" -ge 5 ]; then
                 ACDToolsLog error "Upload failed 5 times - giving up"
                 exit 1
             else
                 ACDToolsSyncNodes
+                ACDToolsSyncLocalNodes
             fi
             sleep 60
         done
@@ -279,6 +305,7 @@ function ACDToolsUpload {
 
     ACDToolsLog info "Upload Complete - Syncing changes"
     ACDToolsSyncNodes
+    ACDToolsSyncLocalNodes
 
     # Delete local files older than ${LOCALDAYS}
     ACDToolsLocalCleanup
