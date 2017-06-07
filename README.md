@@ -53,6 +53,7 @@ Once cloned, copy the `vars.template` file to `vars` and edit the variables. If 
 `ENCFS6_CONFIG` | The local path to your ENCFS configuration XML file.
 `HTTP_PROXY`*   | HTTP proxy endpoint.
 `HTTPS_PROXY`*  | HTTPS proxy endpoint.
+`MODE`          | `gdrive` to enable Google Drive mode.
 
 > \* Optional. It's also unknown if HTTP is ever used instead of HTTPS however is unlikely.
 
