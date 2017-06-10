@@ -300,19 +300,28 @@ function ACDToolsUpload {
     if [ "${#EXCLUDENAME}" -gt "0" ]; then
         ACDToolsLog info "Will not upload ${EXCLUDENAME} directory \
             (.unionfs-fuse)"
-        ACDEXCLUDE=" -xp ${MOUNTBASE}/local-encrypted/${EXCLUDENAME} "
+        if [ "${MODE}" == "gdrive" ]; then
+            ACDEXCLUDE=" --exclude /${EXCLUDENAME}/* "
+            ULCMD=$(${RCLONE} -v copy ${ACDEXCLUDE} \
+                ${MOUNTBASE}/local-encrypted/ \
+                Google:${ACDSUBDIR})
+        else
+            ACDEXCLUDE=" -xp ${MOUNTBASE}/local-encrypted/${EXCLUDENAME} "
+            ULCMD=$(${ACDCLI} upload -o ${ACDEXCLUDE} \
+                ${MOUNTBASE}/local-encrypted/* \
+                ${ACDSUBDIR})
+        fi
     fi
 
-    # Upload to Amazon Drive
+    # Upload to Cloud Drive
     # Redirect error to `/dev/null` so as not to pollute the output with an
     # `Input/output error`.
     if [ "$(ls -A ${MOUNTBASE}/local-encrypted/* 2> /dev/null)" ] ; then
-        until ${ACDCLI} upload -o ${ACDEXCLUDE} ${MOUNTBASE}/local-encrypted/* \
-            ${ACDSUBDIR}
+        until ${ULCMD}
         do
             ULATTEMPTS=$((ULATTEMPTS+1))
-            ACDToolsLog error "Some uploads failed - uploading again after a sync \
-                (attempt ${ULATTEMPTS})"
+            ACDToolsLog error "Some uploads failed - uploading again after a
+                sync (attempt ${ULATTEMPTS})"
 
             if [ "${ULATTEMPTS}" -ge 5 ]; then
                 ACDToolsLog error "Upload failed 5 times - giving up"
