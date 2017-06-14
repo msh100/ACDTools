@@ -224,7 +224,7 @@ function ACDToolsSyncDeletes {
             if [ "${#ENCNAME}" -gt "0" ]; then
             if [ "${MODE}" == "gdrive" ]; then
                 ACDEXIST=$(${RCLONE} ls --max-depth=1 \
-                    Google:${ACDSUBDIR}/${ENCNAME} > /dev/null 2>&1; \
+                    ${RCLONEREMOTE}:${ACDSUBDIR}/${ENCNAME} > /dev/null 2>&1; \
                     echo $?)
             else
                 ACDEXIST=$(${ACDCLI} ls ${ACDSUBDIR}/${ENCNAME} > /dev/null 2>&1; \
@@ -237,7 +237,8 @@ function ACDToolsSyncDeletes {
                     deleting"
                     
                 if [ "${MODE}" == "gdrive" ]; then
-                    DELCMD=$(${RCLONE} delete Google:"${ACDSUBDIR}/${ENCNAME}")
+                    DELCMD=$(${RCLONE} delete \
+                        ${RCLONEREMOTE}:"${ACDSUBDIR}/${ENCNAME}")
                 else
                     DELCMD=$(${ACDCLI} rm "${ACDSUBDIR}/${ENCNAME}")
                 fi
@@ -304,7 +305,7 @@ function ACDToolsUpload {
             ACDEXCLUDE=" --exclude /${EXCLUDENAME}/* "
             ULCMD=$(${RCLONE} -v copy ${ACDEXCLUDE} \
                 ${MOUNTBASE}/local-encrypted/ \
-                Google:${ACDSUBDIR})
+                ${RCLONEREMOTE}:${ACDSUBDIR})
         else
             ACDEXCLUDE=" -xp ${MOUNTBASE}/local-encrypted/${EXCLUDENAME} "
             ULCMD=$(${ACDCLI} upload -o ${ACDEXCLUDE} \
@@ -368,7 +369,9 @@ function ACDToolsACDCLIMount {
                 --modules="subdir,subdir=${ACDSUBDIR}" \
                 ${MOUNTBASE}/acd-encrypted/
         elif [ "${MODE}" == 'gdrive' ]; then
+            mkdir -p ${MOUNTBASE}/chunks
             ${PLEXDRIVE} -o allow_other,read_only -v 2 \
+                -t ${MOUNTBASE}/chunks \
                 --clear-chunk-max-size=32G ${MOUNTBASE}/acd-encrypted/
         fi
 
