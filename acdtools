@@ -51,7 +51,7 @@ done
 if [ ${CONFOPT} ] && [ -f ${CONFOPT} ]; then
     # Ensure user defined configuration exists
     CONFIGPATH=${CONFOPT}
-elif [ -f ${PWD}/vars ]; then
+elif [ -f "${PWD}/vars" ]; then
     # Check if configuration exists in PWD
     CONFIGPATH=${PWD}/vars
 elif [ -f ${DIR}/vars ]; then
